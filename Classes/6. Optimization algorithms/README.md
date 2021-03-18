@@ -48,3 +48,25 @@ Depending on our choice of learning rate and depending on how well conditioned t
 
 ### 6.3.2 Multivariate Gradient Descent
 Let us consider the situation where x ∈ Rd. That is, the objective function f : Rd → R maps vectors into scalars. Its gradient is a vector consisting of d partial derivatives.
+
+## 6.4 Stochastic Gradient Descent
+Stochastic gradient descent (SGD) reduces computational cost at each iteration. At each iteration of stochastic gradient descent, we uniformly sample an index for data examples at random, and compute the gradient to update x.
+
+As we can see, the trajectory of the variables in the SGD is much more noisy than the one we observed in gradient descent. This is due to the stochastic nature of the gradient.
+
+**Dynamic Learning Rate:** Replacing η with a time-dependent learning rate η(t).
+
+![dlr](imgs/dlr.png)
+
+## 6.5 Minibatch Stochastic Gradient Descent
+Gradient Descent is not particularly data efficient whenever data is very similar. Stochastic Gradient Descent is not particularly computationally efficient since CPUs and GPUs cannot exploit the full power of vectorization
+
+We can increase the computational efficiency of this operation by applying it to a minibatch of observations at a time. That is, we replace the gradient over a single observation by one over a small batch
+
+Now we can compare the time vs. loss for the previous four experiments. As can be seen, although SGD converges faster than GD in terms of number of examples processed, it uses more time to reach the same loss than GD because computing the gradient example by example is not as efficient. Minibatch SGD is able to trade-off convergence speed and computation efficiency. A minibatch size of 10 is more efficient than SGD; a minibatch size of 100 even outperforms GD in terms of runtime.
+
+![](imgs/time.png)
+
+## 6.6 Momentum
+
+v is called momentum. It accumulates past gradients similar to how a heavy ball rolling down the objective function landscape integrates over past forces. Large β amounts to a long-range average, whereas small β amounts to only a slight correction relative to a gradient method.
