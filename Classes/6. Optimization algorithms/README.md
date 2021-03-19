@@ -69,4 +69,65 @@ Now we can compare the time vs. loss for the previous four experiments. As can b
 
 ## 6.6 Momentum
 
-v is called momentum. It accumulates past gradients similar to how a heavy ball rolling down the objective function landscape integrates over past forces. Large β amounts to a long-range average, whereas small β amounts to only a slight correction relative to a gradient method.
+![m](imgs/momentum.png)
+
+This effectively replaces the instantaneous gradient by one that’s been averaged over multiple past gradients, v is called momentum. It accumulates past gradients similar to how a heavy ball rolling down the objective function landscape integrates over past forces. Large β amounts to a long-range average, whereas small β amounts to only a slight correction relative to a gradient method (it solves Ill conditioned problems).
+
+## 6.7 Adagrad
+
+Parameters associated with infrequent features only receive meaningful updates whenever these features occur. Given a decreasing learning rate we might end up in a situation where the learning rate either decreases too slowly for frequent features or too quickly for infrequent ones.
+
+A possible hack to redress this issue would be to count the number of times we see a particular feature and to use this as a clock for adjusting learning rates.
+
+AdaGrad addresses this by replacing the rather crude counter s(i,t)
+by an aggregate of the squares of previously observed gradients.
+
+![](imgs/adagrad.png)
+
+Due to the cumulative effect of st, the learning rate continuously decays.
+
+## 6.8 RMSProp
+
+One of the key issues in AdaGrad is that the learning rate decreases at a predefined schedule. Adagrad accumulates the squares of the gradient into a state vector. As a result st keeps on growing without bound due to the lack of normalization, essentially linearly as the algorithm converges.
+
+![rmsprop](imgs/rmsprop.png)
+
+## 6.9 Adadelta
+
+Adadelta has no learning rate parameter. Instead, it uses the rate of change in the parameters itself to adapt the learning rate. It requires two state variables to store the second moments of gradient and the change in parameters.
+
+Adadelta is a more robust extension of Adagrad that adapts learning rates based on a moving window of gradient updates, instead of accumulating all past gradients.
+
+![ad](imgs/adadelta.png)
+
+## 6.10 Adam
+Adam combines features of many optimization algorithms into a fairly robust update rule.
+
+It uses exponential weighted moving averages to obtain an estimate of both the momentum and also the second momento of the gradient.
+
+![](imgs/adam1.png)
+
+Correspondingly the normalized state variables are given by:
+
+![](imgs/adam2.png)
+
+First, we rescale the gradient: ![](imgs/adam3.png)
+
+Then we update:
+![](imgs/adam4.png)
+
+### 6.10.1 Yogi
+
+One of the problems of Adam is that it can fail to converge even in convex settings when the second moment estimate in st blows up.
+
+For gradients with significant variance we may encounter issues with convergence. They can be amended by using larger minibatches or by switching to an improved estimate for st. Yogi offers such an alternative.
+
+## 6.11 Learning rate scheduling
+
+Decreasing the learning rate during training can lead to improved accuracy and (most perplexingly) reduced overfitting of the model.
+
+* A **piecewise** decrease of the learning rate whenever progress has plateaued is effective in practice. Essentially this ensures that we converge efficiently to a suitable solution and only then reduce the inherent variance of the parameters by reducing the learning rate.
+
+* **Cosine** schedulers are popular for some computer vision problems.
+
+* A **warmup** period before optimization can prevent divergence.
