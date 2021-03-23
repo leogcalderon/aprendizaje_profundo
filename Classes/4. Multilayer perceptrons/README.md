@@ -1,6 +1,6 @@
-# 1. Multilayer Perceptrons
+# 4. Multilayer Perceptrons
 
-## 1.1 Hidden layers
+## 4.1 Hidden layers
 We can overcome the limitations of linear models and handle a more general class of functions by incorporating one or more hidden layers. The easiest way to do this is to stack many fully-connected layers on top of each other.
 
 The hidden units are given by an affine function of the inputs, and the outputs (pre-softmax) are just an affine function of the hidden units. An affine function of an affine function is itself an affine function.
@@ -9,7 +9,7 @@ In order to realize the potential of multilayer architectures, we need one more 
 
 For certain choices of the activation function, it is widely known that MLPs are universal approximators. Even with a single-hidden-layer network, given enough nodes (possibly absurdly many), and the right set of weights, we can model any function, though actually learning that function is the hard part.
 
-## 1.2 Activation functions
+## 4.2 Activation functions
 
 Activation functions decide whether a neuron should be activated or not by calculating the weighted sum and further adding bias with it. They are differentiable operators to transform input signals to outputs, while most of them add non-linearity.
 
@@ -23,7 +23,7 @@ Activation functions decide whether a neuron should be activated or not by calcu
 
 ![](imgs/formulas.png)
 
-## 1.3 Forward Propagation, Backward Propagation, and Computational Graphs
+## 4.3 Forward Propagation, Backward Propagation, and Computational Graphs
 
 Forward propagation (or forward pass) refers to the calculation and storage of intermediate variables (including outputs) for a neural network in order from the input layer to the output layer.
 
@@ -35,7 +35,7 @@ Backpropagation refers to the method of calculating the gradient of neural netwo
 
 When training neural networks, forward and backward propagation depend on each other. In particular, for forward propagation, we traverse the computational graph in the direction of dependencies and compute all the variables on its path. These are then used for backpropagation where the compute order on the graph is reversed.
 
-## 1.4 Numerical Stability and Initialization
+## 4.4 Numerical Stability and Initialization
 
 One frequent culprit causing the **vanishing gradient** problem is the choice of the activation function σ that is appended following each layer’s linear operations. The sigmoid’s gradient vanishes both when its inputs are large and when they are small. Consequently, ReLUs, which are more stable (but less neurally plausible), have emerged as the default choice for practitioners.
 
