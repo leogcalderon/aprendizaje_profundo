@@ -61,4 +61,32 @@ Is typically used to adjust the number of channels between network layers and to
 
 ## 8.5 Pooling
 
+Often, as we process images, we want to gradually reduce the spatial resolution of our hidden representations, aggregating information so that the higher up we go in the network, the larger the receptive field (in the input) to which each hidden node is sensitive.
+
+Pooling operators consist of a fixed-shape window that is slid over all regions in the input according to its stride, computing a single output for each location traversed by the fixed-shape window (sometimes known as the pooling window).
+
+However, unlike the cross-correlation computation of the inputs and kernels in the convolutional layer, the pooling layer contains no parameters (there is no kernel).
+
+In both cases (MAX, AVG), as with the cross-correlation operator, we can think of the pooling window as starting from the top left of the input tensor and sliding across the input tensor from left to right and top to bottom. At each location that the pooling window hits, it computes the maximum or average value of the input subtensor in the window, depending on whether max or average pooling is employed.
+
+**Output dimensions:** As with convolutional layers, pooling layers can also change the output shape. And as before, we can alter the operation to achieve a desired output shape by padding the input and adjusting the stride.
+
+**Multiple channels:** When processing multi-channel input data, the pooling layer pools each input channel separately, rather than summing the inputs up over channels as in a convolutional layer.
+
 ## 8.6 LeNet
+The first published CNNs to capture wide attention for its performance on computer vision tasks.
+
+![](imgs/lenet.png)
+
+The basic units in each convolutional block are a convolutional layer, a sigmoid activation function, and a subsequent average pooling operation. Note that while ReLUs and max-pooling work better, these discoveries had not yet been made in the 1990s.
+
+* Each **convolutional layer** uses a 5×5 kernel and a sigmoid activation function.
+   * the first layer has 6 output channels
+   * the second has 16.
+
+
+* Each 2×2 **pooling operation** (stride 2) reduces dimensionality by a factor of 4 via spatial downsampling.
+
+In order to pass output from the convolutional block to the dense block, we must flatten each example in the minibatch. In other words, we take this four-dimensional input and transform it into the two-dimensional input expected by fully-connected layers
+
+LeNet’s dense block has three fully-connected layers, with 120, 84, and 10 outputs, respectively.
