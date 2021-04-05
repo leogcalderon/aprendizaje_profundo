@@ -42,6 +42,46 @@ GoogLeNet uses a stack of a total of 9 inception blocks and global average pooli
 
 ## 9.5 Batch normalization
 
+Batch normalization, a popular and effective technique that consistently accelerates the convergence of deep networks.
+
+* Intuitively, this standardization plays nicely with our optimizers because it puts the parameters a priori at a similar scale.
+
+* The variables in intermediate layers may take values with widely varying magnitudes
+
+* Deeper networks are complex and easily capable of overfitting.
+
+Batch normalization is applied to individual layers:
+In each training iteration
+1. Normalize the inputs (of batch normalization) by subtracting their mean and dividing by their standard deviation, where both are estimated based on the statistics of the current minibatch.
+
+2. we apply a scale coefficient and a scale offset. It is precisely due to this normalization based on batch statistics that batch normalization derives its name.
+
+One takeaway here is that when applying batch normalization, the choice of batch size may be even more significant than without batch normalization.
+
+![](imgs/bn.png)
+
+Note that γ and β are parameters that need to be learned jointly with the other model parameters.
+
+* **FC Layers:** batch normalization is applied after the affine transformation and before the nonlinear activation function.
+
+* **Conv Layers:** batch normalization is applied after the convolution and before the nonlinear activation function. When the convolution has multiple output channels, we need to carry out batch normalization for each of the outputs of these channels, and each channel has its own scale and shift parameters, both of which are scalars.
+
+Typically, after training, we use the entire dataset to compute stable estimates of the variable statistics and then fix them at prediction time. Consequently, batch normalization behaves differently during training and at test time.
+
 ## 9.6 ResNet
+Residual block:
+![](imgs/rb.png)
+
+The first two layers of ResNet are the same as those of the GoogLeNet: the 7×7 convolutional layer with 64 output channels and a stride of 2 is followed by the 3×3 maximum pooling layer with a stride of 2. The difference is the batch normalization layer added after each convolutional layer in ResNet.
+
+![](imgs/rn.png)
 
 ## 9.7 DenseNet
+
+The key difference between ResNet and DenseNet is that in the latter case outputs are concatenated rather than added.
+
+In terms of implementation this is quite simple: rather than adding terms, we concatenate them.
+
+The name DenseNet arises from the fact that the dependency graph between variables becomes quite dense. The last layer of such a chain is densely connected to all previous layers.
+
+![](imgs/dense.png)
