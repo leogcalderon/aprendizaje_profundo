@@ -32,7 +32,7 @@ CBOW model training is quite similar to skip-gram model training. The maximum li
 
 ![](imgs/cbowloss.png)
 
-## 15.2 Negative sampling
+## 15.1.3 Negative sampling
 
 For larger dictionaries with hundreds of thousands or even millions of words, the overhead for computing each gradient may be too high. In order to reduce such computational complexity.
 
@@ -40,4 +40,21 @@ Negative sampling modifies the original objective function. Given a context wind
 
 ![](imgs/ns.png)
 
-## 15.3
+## 15.3 GloVe
+GloVe adopts squared loss and makes three changes to the skip-gram model based on this loss.
+
+1. Here, we use the non-probability distribution variables p′ij=xij and q′ij=exp(u⊤jvi) and take their logs. Therefore, we get the squared loss.
+
+2. We add two scalar model parameters for each word wi: the bias terms bi (for central target words) and ci (for context words).
+
+3. Replace the weight of each loss with the function h(xij). The weight function h(x) is a monotone increasing function with the range [0,1].
+
+![](imgs/gloveloss.png)
+
+## 15.4 fastText
+
+FastText proposes a subword embedding method. Based on the skip-gram model in word2vec, it represents the central word vector as the sum of the subword vectors of the word.
+
+Subword embedding utilizes the principles of morphology, which usually improves the quality of representations of uncommon words.
+
+Byte pair encoding performs a statistical analysis of the training dataset to discover common symbols within a word. As a greedy approach, byte pair encoding iteratively merges the most frequent pair of consecutive symbols.
