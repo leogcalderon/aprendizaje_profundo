@@ -22,7 +22,7 @@ def search_idxs(input_ids, answer):
 
     return spans[0] if len(spans) > 0 else [0, 0]
 
-def preprocess_inputs(question, context, answer, tokenizer):
+def preprocess_inputs(question, context, answer, tokenizer, max_len):
     """
     Devuelve tensores listos para alimentar el modelo
     Parameters:
@@ -30,9 +30,15 @@ def preprocess_inputs(question, context, answer, tokenizer):
     inputs_ids : str
     answer : str
     tokenizer : transformers.BertTokenizer
+    max_len : int
     """
     answer = tokenizer(answer, add_special_tokens=False)['input_ids']
-    input_ids = tokenizer(question, context)['input_ids']
+    
+    # Por ahora, si el input tokenizado es > 512 tokens, solo tomamos
+    # los 512 primeros tokens, ver si es mejor tirarlos, o hacer ventanas.
+    # ya que la respuesta puede estar justo en el corte.
+    
+    input_ids = tokenizer(question, context)['input_ids'][:max_len]
     spans = search_idxs(input_ids, answer)
 
     return {
@@ -78,7 +84,8 @@ def preprocess_dataset(dataset_path, tokenizer='distilbert-base-cased', max_len=
                         question,
                         context,
                         answers[0]['text'],
-                        tokenizer
+                        tokenizer,
+                        max_len
                     ))
 
                 # De lo contrario, procesar un ejemplo por respuesta
@@ -88,12 +95,13 @@ def preprocess_dataset(dataset_path, tokenizer='distilbert-base-cased', max_len=
                             question,
                             context,
                             answer['text'],
-                            tokenizer
+                            tokenizer,
+                            max_len
                         ))
 
     if save:
-      with open(save, 'w') as file:
-        json.dump({'data': dataset}, file)
+        with open(save, 'w') as file:
+            json.dump({'data': dataset}, file)
 
     return dataset
 
