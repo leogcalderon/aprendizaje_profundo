@@ -22,29 +22,54 @@ def search_idxs(input_ids, answer):
 
     return spans[0] if len(spans) > 0 else [0, 0]
 
-def preprocess_inputs(question, context, answer, tokenizer, max_len):
+def preprocess_inputs(question, context, answer, tokenizer, max_len, chunk_size=384):
     """
-    Devuelve tensores listos para alimentar el modelo
+    Devuelve los tokens de pregunta y contexto junto con los
+    indices de comienzo y fin de respuesta
+
     Parameters:
     -----------
-    inputs_ids : str
+    question : str
+    context : str
     answer : str
     tokenizer : transformers.BertTokenizer
     max_len : int
+    chunk_size : int
     """
     answer = tokenizer(answer, add_special_tokens=False)['input_ids']
-    
-    # Por ahora, si el input tokenizado es > 512 tokens, solo tomamos
-    # los 512 primeros tokens, ver si es mejor tirarlos, o hacer ventanas.
-    # ya que la respuesta puede estar justo en el corte.
-    
-    input_ids = tokenizer(question, context)['input_ids'][:max_len]
-    spans = search_idxs(input_ids, answer)
+    question = tokenizer(question)['input_ids']
+    context = tokenizer(context, add_special_tokens=False)['input_ids']
 
-    return {
-        'input_ids': input_ids,
-        'spans': spans
-    }
+    # Si la [CLS] pregunta [SEP] contexto [SEP] son menores a 384
+    # generamos un ejemplo
+    if len(question + context + [tokenizer.sep_token_id]) <= chunk_size:
+        input_ids = (question + context + [tokenizer.sep_token_id])
+        spans = search_idxs(input_ids, answer)
+
+        return {
+            'input_ids': input_ids,
+            'spans': spans
+        }
+
+    # Si superan 384, devolvemos una lista con los chunks preprocesados de 384
+    else:
+        chunks = []
+        for i in range(0, len(question + context + [tokenizer.sep_token_id]), chunk_size - len(question)):
+            input_ids = (
+                question +
+                context[i:i + chunk_size - len(question) - 1] +
+                [tokenizer.sep_token_id]
+            )
+
+            spans = search_idxs(input_ids, answer)
+
+            chunks.append({
+                'input_ids': input_ids,
+                'spans': spans
+            })
+
+        return chunks
+
 
 def preprocess_dataset(dataset_path, tokenizer='distilbert-base-cased', max_len=512, save=None):
     """
@@ -57,7 +82,7 @@ def preprocess_dataset(dataset_path, tokenizer='distilbert-base-cased', max_len=
     tokenizer : str
         transformers tokenizer
     save : str
-      path/to/save/preprocessed/dataset
+        path/to/save/preprocessed/dataset
 
     Returns:
     -------
@@ -80,33 +105,41 @@ def preprocess_dataset(dataset_path, tokenizer='distilbert-base-cased', max_len=
 
                 # Si todas las respuestas son iguales, solo procesar un ejemplo
                 if all([answers[0]['text'] == answer['text'] for answer in answers]):
-                    dataset.append(preprocess_inputs(
+                    preprocessed_inputs = preprocess_inputs(
                         question,
                         context,
                         answers[0]['text'],
                         tokenizer,
                         max_len
-                    ))
+                    )
+
+                    # Depende de si prepreocess inputs nos dio la lista de
+                    # chunks o un solo ejemplo
+                    if isinstance(preprocessed_inputs, dict):
+                        dataset.append(preprocessed_inputs)
+                    else:
+                        dataset += preprocessed_inputs
 
                 # De lo contrario, procesar un ejemplo por respuesta
                 else:
                     for answer in answers:
-                        dataset.append(preprocess_inputs(
+                        preprocessed_inputs = preprocess_inputs(
                             question,
                             context,
                             answer['text'],
                             tokenizer,
                             max_len
-                        ))
+                        )
+
+                    # Depende de si prepreocess inputs nos dio la lista de
+                    # chunks o un solo ejemplo
+                    if isinstance(preprocessed_inputs, dict):
+                        dataset.append(preprocessed_inputs)
+                    else:
+                        dataset += preprocessed_inputs
 
     if save:
         with open(save, 'w') as file:
             json.dump({'data': dataset}, file)
 
     return dataset
-
-if __name__ == '__main__':
-    dataset_path = sys.argv[1]
-    if len(sys.argv) > 2:
-        save = sys.argv[2]
-    preprocess_dataset(dataset_path, save=save)
