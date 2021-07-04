@@ -2,32 +2,6 @@ import torch
 from dataloader import prepare_inputs
 from tqdm import tqdm
 
-def restore_text(token_list):
-    """
-    Crea el texto original a partir de tokens
-    generados por transformers.BertTokenizer
-    sinppet: https://github.com/huggingface/transformers/issues/3434
-
-    Parameters:
-    -----------
-    token_list : list
-
-    Returns:
-    --------
-    str
-    """
-    is_subtoken = lambda word: True if word[:2] == '##' else False
-    restored_text = []
-    for i, token in enumerate(token_list):
-        if not is_subtoken(token) and (i + 1) < len(token_list) and is_subtoken(token_list[i + 1]):
-            restored_text.append(token + token_list[i + 1][2:])
-            if (i + 2) < len(token_list) and is_subtoken(token_list[i + 2]):
-                restored_text[-1] = restored_text[-1] + token_list[i + 2][2:]
-        elif not is_subtoken(token):
-            restored_text.append(token)
-
-    return ' '.join(restored_text)
-
 def get_prediction(model, example, tokenizer, device, max_len=512):
     """
     Predice la respuesta a partir de un
@@ -118,3 +92,4 @@ def get_scores(model, dataset, tokenizer):
         sum(metrics['EM']) / len(metrics['EM']),
         sum(metrics['F1']) / len(metrics['F1'])
     )
+
