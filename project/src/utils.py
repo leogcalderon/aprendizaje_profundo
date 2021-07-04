@@ -61,9 +61,7 @@ def get_prediction(model, example, tokenizer, device, max_len=512):
     )
 
     answer_ids = input['input_ids'][start.argmax(1).item():end.argmax(1).item()]
-    answer_tokens = tokenizer.convert_ids_to_tokens(answer_ids)
-
-    return restore_text(answer_tokens)
+    return tokenizer.decode(answer_ids)
 
 def compute_exact_match(pred, truth):
     """
@@ -112,7 +110,7 @@ def get_scores(model, dataset, tokenizer):
         for example in tqdm(squad_train, 'Evaluando resultados'):
             s, e = example['spans']
             pred = get_prediction(model, example, tokenizer)
-            true = restore_text(tokenizer.convert_ids_to_tokens(example['input_ids'][s:e]))
+            true = tokenizer.decode(example['input_ids'][s:e])
             metrics['EM'].append(compute_exact_match(pred, true))
             metrics['F1'].append(compute_f1(pred, true))
 
