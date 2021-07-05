@@ -126,23 +126,3 @@ def get_scores(model, dataset, tokenizer, device):
         sum(metrics['EM']) / len(metrics['EM']),
         sum(metrics['F1']) / len(metrics['F1'])
     )
-
-def epoch_time(start_time, end_time):
-    """
-    Calcula el tiempo transcurrido entre los
-    dos argumentos.
-    Snippet: TP8
-
-    Parameters:
-    -----------
-    start_time : float
-    end_time : float
-
-    Returns:
-    --------
-    tuple
-    """
-    elapsed_time = end_time - start_time
-    elapsed_mins = int(elapsed_time / 60)
-    elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
-    return elapsed_mins, elapsed_secs

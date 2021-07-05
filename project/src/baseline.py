@@ -3,6 +3,26 @@ import time
 from torch import nn
 from transformers import DistilBertModel
 
+def epoch_time(start_time, end_time):
+    """
+    Calcula el tiempo transcurrido entre los
+    dos argumentos.
+    Snippet: TP8
+
+    Parameters:
+    -----------
+    start_time : float
+    end_time : float
+
+    Returns:
+    --------
+    tuple
+    """
+    elapsed_time = end_time - start_time
+    elapsed_mins = int(elapsed_time / 60)
+    elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
+    return elapsed_mins, elapsed_secs
+
 class BaseModel(nn.Module):
     """
     Baseline con Bert-base-cased pre entrenado y dos capas lineares
