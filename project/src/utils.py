@@ -81,7 +81,7 @@ def get_scores(model, dataset, tokenizer):
     model.eval()
 
     with torch.no_grad():
-        for example in tqdm(squad_train, 'Evaluando resultados'):
+        for example in tqdm(dataset, 'Evaluando resultados'):
             s, e = example['spans']
             pred = get_prediction(model, example, tokenizer)
             true = tokenizer.decode(example['input_ids'][s:e])
