@@ -1,5 +1,5 @@
 import torch
-from dataloader import prepare_inputs
+from .dataloader import prepare_inputs
 from tqdm import tqdm
 
 def get_prediction(model, example, tokenizer, device, max_len=512):
