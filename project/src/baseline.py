@@ -1,4 +1,5 @@
 import torch
+import time
 from torch import nn
 from transformers import DistilBertModel
 
@@ -63,16 +64,17 @@ def train_baseline(
     --------
     nn.Module, dict
     """
-    model.train()
     model.to(device)
     history = {'train': [], 'val': []}
 
     for epoch in range(epochs):
         train_epoch_loss = 0
         val_epoch_loss = 0
+        start_time = time.time()
 
         print('Entrenando modelo')
         for i, example in enumerate(train_dataloader):
+            model.train()
             optimizer.zero_grad()
 
             input_ids, token_type_ids, attention_mask = (
@@ -98,16 +100,20 @@ def train_baseline(
             train_epoch_loss += l.item()
 
             if i % print_every == (print_every - 1):
+                current_time = time.time()
+                elapsed_time = epoch_time(start_time, current_time)
                 train_loss = train_epoch_loss / (i * train_dataloader.batch_size)
-                history['train'].append(train_loss)
-                print(f'[EPOCH: {epoch + 1} - BATCH: {i + 1}]')
-                print(f'Train loss: {train_loss}')
-                print('===========================')
-                train_epoch_loss = 0
+                print(f'[EPOCH: {epoch + 1} - BATCH: {i + 1}/{len(train_dataloader)}]')
+                print(f'Perdida de entrenamiento actual: {train_loss}')
+                print(f'Tiempo entrenando: {elapsed_time[0]}:{elapsed_time[1]} minutos')
+                print('================================')
+
+        history['train'].append(train_epoch_loss / (i * train_dataloader.batch_size)
 
         print('Evaluando modelo')
         for i, example in enumerate(val_dataloader):
             model.eval()
+            start_time = time.time()
 
             with torch.no_grad():
                 input_ids, token_type_ids, attention_mask = (
@@ -128,10 +134,13 @@ def train_baseline(
 
                 if i % print_every == (print_every - 1):
                     val_loss = val_epoch_loss / (i * val_dataloader.batch_size)
-                    history['val'].append(val_loss)
-                    print(f'[EPOCH: {epoch + 1} - BATCH: {i + 1}]')
-                    print(f'Validation loss: {val_loss}')
-                    print('===========================')
-                    val_epoch_loss = 0
+                    current_time = time.time()
+                    elapsed_time = epoch_time(start_time, current_time)
+                    print(f'[EPOCH: {epoch + 1} - BATCH: {i + 1}/{len(train_dataloader)}]')
+                    print(f'Perdida de validacion actual: {val_loss}')
+                    print(f'Tiempo validando: {elapsed_time[0]}:{elapsed_time[1]} minutos')
+                    print('================================')
+
+            history['val'].append(val_epoch_loss / (i * val_dataloader.batch_size))
 
     return model, history
