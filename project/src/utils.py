@@ -1,6 +1,45 @@
 import torch
-from dataloader import prepare_inputs
 from tqdm import tqdm
+
+def prepare_inputs(example, tokenizer, chunk_size=384):
+    """
+    Crea los tensores de entrada
+    [tokens, mascaras de atencion, spans, tipo de token]
+    Parameters:
+    -----------
+    example : dict
+    tokenizer : transformers.BertTokenizer
+    chunk_size : int
+
+    Returns:
+    --------
+    dict
+    """
+    start_context = example['input_ids'].index(tokenizer.sep_token_id) + 1
+
+    token_type_ids = (
+        [0] * start_context +
+        [1] * (len(example['input_ids']) - start_context) +
+        [0] * (chunk_size - len(example['input_ids']))
+    )
+
+    attention_mask = (
+        [1] * len(example['input_ids']) +
+        [0] * (chunk_size - len(example['input_ids']))
+    )
+
+    input_ids = (
+        example['input_ids'] +
+        [tokenizer.pad_token_id] * (chunk_size - len(example['input_ids']))
+    )
+
+    return {
+        'input_ids': torch.Tensor(input_ids).int(),
+        'start_idx': torch.tensor([example['spans'][0]]).int(),
+        'end_idx': torch.tensor([example['spans'][1]]).int(),
+        'token_type_ids': torch.Tensor(token_type_ids).int(),
+        'attention_mask': torch.Tensor(attention_mask).int()
+    }
 
 def get_prediction(model, example, tokenizer, device, max_len=512):
     """
