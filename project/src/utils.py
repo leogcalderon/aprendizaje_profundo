@@ -18,13 +18,7 @@ def get_prediction(model, example, tokenizer, device, max_len=512):
     --------
     str
     """
-    # TODO: implementar chunks en caso de que
-    # la pregunta + contexto supere los 384
-    # Casos:
-    #   * no hay respuestas en ningun chunk
-    #   * solo hay una respuesta (devolver esa)
-    #   * mas de una respuesta (verificar si son iguales, y si no ? QUE HACER?)
-
+    model.to(device)
     model.eval()
     input = prepare_inputs(example, tokenizer)
 
@@ -63,7 +57,7 @@ def compute_f1(pred, truth):
 
     return 2 * (prec * rec) / (prec + rec)
 
-def get_scores(model, dataset, tokenizer):
+def get_scores(model, dataset, tokenizer, device):
     """
     Calcula exact match y F1
 
@@ -72,6 +66,7 @@ def get_scores(model, dataset, tokenizer):
     model : nn.Module
     dataset : dict
     tokenizer : transformers.BertTokenizer
+    device : str
 
     Returns:
     --------
@@ -83,7 +78,7 @@ def get_scores(model, dataset, tokenizer):
     with torch.no_grad():
         for example in tqdm(dataset, 'Evaluando resultados'):
             s, e = example['spans']
-            pred = get_prediction(model, example, tokenizer)
+            pred = get_prediction(model, example, tokenizer, device)
             true = tokenizer.decode(example['input_ids'][s:e])
             metrics['EM'].append(compute_exact_match(pred, true))
             metrics['F1'].append(compute_f1(pred, true))
