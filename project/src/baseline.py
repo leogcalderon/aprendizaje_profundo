@@ -161,6 +161,6 @@ def train_baseline(
                     print(f'Tiempo validando: {elapsed_time[0]}:{elapsed_time[1]} minutos')
                     print('================================')
 
-            history['val'].append(val_epoch_loss / len(val_dataloader.dataset))
+        history['val'].append(val_epoch_loss / len(val_dataloader.dataset))
 
     return model, history
