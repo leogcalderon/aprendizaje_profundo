@@ -128,7 +128,7 @@ def train_baseline(
                 print(f'Tiempo entrenando: {elapsed_time[0]}:{elapsed_time[1]} minutos')
                 print('================================')
 
-        history['train'].append(train_epoch_loss / (i * train_dataloader.batch_size))
+        history['train'].append(train_epoch_loss / len(train_dataloader.dataset))
 
         print('Evaluando modelo')
         for i, example in enumerate(val_dataloader):
@@ -161,6 +161,6 @@ def train_baseline(
                     print(f'Tiempo validando: {elapsed_time[0]}:{elapsed_time[1]} minutos')
                     print('================================')
 
-            history['val'].append(val_epoch_loss / (i * val_dataloader.batch_size))
+            history['val'].append(val_epoch_loss / len(val_dataloader.dataset))
 
     return model, history
