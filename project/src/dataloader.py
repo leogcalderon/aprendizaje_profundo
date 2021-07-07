@@ -25,7 +25,7 @@ def load_processed_datasets(processed_path):
 
     return datasets
 
-def create_shuffled_dataset(processed_path):
+def create_shuffled_dataset(processed_path, adversarial_flag=False):
     """
     Lee los datasets en formato json y crea
     un dataset con los datos mezclados
@@ -33,6 +33,7 @@ def create_shuffled_dataset(processed_path):
     Parameters:
     -----------
     processed_path : str
+    adversarial_flag : bool
 
     Returns:
     --------
@@ -41,8 +42,21 @@ def create_shuffled_dataset(processed_path):
     datasets = load_processed_datasets(processed_path)
     shuffled_dataset = list()
 
-    for dataset in datasets.values():
-        shuffled_dataset += dataset
+    oodomain_datasets = [k for k, v in datasets.items() if len(v) < 500]
+
+    for name, dataset in datasets.items():
+        if adversarial_flag:
+            if name in oodomain_datasets:
+                for example in dataset:
+                    example['oodomain'] = 1
+            else:
+                for example in dataset:
+                    example['oodomain'] = 0
+
+            shuffled_dataset += dataset
+
+        else:
+            shuffled_dataset += dataset
 
     random.shuffle(shuffled_dataset)
     return shuffled_dataset
