@@ -156,7 +156,7 @@ def train_baseline(
                     val_loss = val_epoch_loss / (i * val_dataloader.batch_size)
                     current_time = time.time()
                     elapsed_time = epoch_time(start_time, current_time)
-                    print(f'[EPOCH: {epoch + 1} - BATCH: {i + 1}/{len(train_dataloader)}]')
+                    print(f'[EPOCH: {epoch + 1} - BATCH: {i + 1}/{len(val_dataloader)}]')
                     print(f'Perdida de validacion actual: {val_loss}')
                     print(f'Tiempo validando: {elapsed_time[0]}:{elapsed_time[1]} minutos')
                     print('================================')
