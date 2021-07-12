@@ -2,6 +2,7 @@ from tqdm import tqdm
 from transformers import BertTokenizer
 import json
 import sys
+import numpy as np
 
 def search_idxs(input_ids, answer):
     """
@@ -143,3 +144,98 @@ def preprocess_dataset(dataset_path, tokenizer='distilbert-base-cased', max_len=
             json.dump({'data': dataset}, file)
 
     return dataset
+
+def augment_dataset(
+    dataset_path,
+    augmented_examples=10,
+    synonym_prob=0.7,
+    pct=0.12,
+    save=None):
+    """
+
+    Parameters:
+    ------------
+    dataset_path : str
+    augmented_examples : int
+        Ejemplos aumentados por ejemplo original
+    synonym_prob : float
+        Probabilidad para aumentar el ejemplo con sinonimos,
+        caso contrario, se aumenta con eliminacion de palabras.
+    pct : float
+        Porcentaje de palabras a cambiar del ejemplo original
+    save : str
+        Directorio para guardar el dataset
+
+    Returns:
+    --------
+    dict
+    """
+    with open(dataset_path, 'r') as file:
+        data = json.load(file)['data']
+
+    for example in tqdm(data, f'Aumentando dataset {dataset_path.split("/")[-1]}'):
+        for paragraph in example['paragraphs']:
+            context = paragraph['context']
+            qas_list = paragraph['qas']
+
+            for qa in qas_list:
+                answers = qa['answers']
+                question = qa['question']
+
+                for augmented_example in range(augment_examples):
+                    if np.random.randn() < 0.7:
+                        #TODO: tener en cuenta de no alterar las palabras
+                        # que esten en la respuesta.
+                        # nlpaug -> https://github.com/makcedward/nlpaug/blob/master/example/textual_augmenter.ipynb
+                        context = add_synonyms(context, pct=pct)
+                        answer = add_synonyms(answer, pct=pct)
+                        question = add_synonyms(question, pct=pct)
+                    else:
+                        context = del_words(context, pct=pct)
+                        answer = del_words(answer, pct=pct)
+                        question = del_words(question, pct=pct)
+
+                    data.append({
+                        'paragraphs': [{
+                            'context': context,
+                            'qas': [{
+                                'answers': [{'answer_start': None, 'text': answer}],
+                                'question': question,
+                                'id': None
+                            }]
+                        }],
+                     'title': None
+                    })
+
+def add_synonyms(sentence, pct):
+    """
+    Cambia un porcentaje de las palabras en la oracion por
+    sinónimos.
+
+    Parameters:
+    -----------
+    sentence : str
+    pct : float
+        Porcentaje de palabras a cambiar
+
+    Returns:
+    --------
+    str
+    """
+    words_to_change = int(len(sentence.split(' ')) * pct)
+
+def del_words(sentence, pct):
+    """
+    Elimina un porcentaje de las palabras en la oracion.
+
+    Parameters:
+    -----------
+    sentence : str
+    pct : float
+        Porcentaje de palabras a eliminar
+
+    Returns:
+    --------
+    str
+    """
+    words_to_delete = int(len(sentence.split(' ')) * pct)
