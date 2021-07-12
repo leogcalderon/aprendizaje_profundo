@@ -54,6 +54,25 @@ from src import (
 def main(train_path, val_path, batch_size, epochs, lr, device, save_path):
     """
     Entrenamiento de baseline
+
+    Parameters:
+    -----------
+    train_path : str
+        Directorio con los json de entrenamiento preprocesados
+        por src.preprocess.preprocess_dataset
+
+    val_path : str
+        Directorio con los json de validación preprocesados
+        por src.preprocess.preprocess_dataset
+
+    epochs : int
+    lr : float
+    device : str
+    save_path : str
+
+    Returns:
+    ---------
+    tuple
     """
     shuffled_train_dataset = dataloader.create_shuffled_dataset(train_path)
     shuffled_val_dataset = dataloader.create_shuffled_dataset(val_path)
@@ -77,5 +96,8 @@ def main(train_path, val_path, batch_size, epochs, lr, device, save_path):
     if save_path:
         torch.save(model.state_dict(), save_path)
 
+    return model, history
+
 if __name__ == '__main__':
-    main()
+    _, history = main()
+    print(history)
