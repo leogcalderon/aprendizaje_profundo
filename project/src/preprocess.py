@@ -3,6 +3,9 @@ from transformers import BertTokenizer
 import json
 import sys
 import numpy as np
+import nlpaug.augmenter.word as naw
+import nltk
+from nltk.corpus import stopwords
 
 def search_idxs(input_ids, answer):
     """
@@ -145,24 +148,69 @@ def preprocess_dataset(dataset_path, tokenizer='distilbert-base-cased', max_len=
 
     return dataset
 
+def augment_example(question, context, answer, pct, synonym_pct):
+    """
+    Crea un nuevo ejemplo del dataset con sinonimos
+    o eliminando palabras.
+
+    Parameters:
+    -----------
+    question : str
+    context : str
+    answer : str
+    pct : float
+    synonym_pct : float
+
+    Returns:
+    --------
+    dict
+    """
+    stop_words = stopwords.words('english')
+    aug = (
+        naw.SynonymAug(aug_p=pct, stopwords=stop_words)
+        if np.random.randn() < synonym_pct
+        else naw.RandomWordAug(aug_p=pct, stopwords=stop_words)
+    )
+    context_parts = context.split(answer)
+
+    new_context_parts = []
+    for context_part in context_parts:
+        new_context_parts.append(aug.augment(context_part))
+
+    question = aug.augment(question)
+    context = (' ' + answer + ' ').join(new_context_parts)
+
+    return {
+        'paragraphs': [{
+            'context': context,
+            'qas': [{
+                'answers': [{'answer_start': None, 'text': answer}],
+                'question': question,
+                'id': None
+            }]
+        }],
+     'title': None
+    }
+
 def augment_dataset(
     dataset_path,
-    augmented_examples=10,
-    synonym_prob=0.7,
+    augmented_examples=16,
     pct=0.12,
+    synonym_pct=0.75,
     save=None):
     """
+    Apenda nuevos ejemplos aumentados al dataset
 
     Parameters:
     ------------
     dataset_path : str
     augmented_examples : int
         Ejemplos aumentados por ejemplo original
-    synonym_prob : float
-        Probabilidad para aumentar el ejemplo con sinonimos,
-        caso contrario, se aumenta con eliminacion de palabras.
     pct : float
         Porcentaje de palabras a cambiar del ejemplo original
+    synonym_pct : float
+        Probabilidad de aumentar el ejemplo con sinonimos,
+        caso contrario, se aumenta con eliminacion de palabras.
     save : str
         Directorio para guardar el dataset
 
@@ -170,9 +218,14 @@ def augment_dataset(
     --------
     dict
     """
+    nltk.download('averaged_perceptron_tagger')
+    nltk.download('wordnet')
+    nltk.download('stopwords')
+
     with open(dataset_path, 'r') as file:
         data = json.load(file)['data']
 
+    new_data = []
     for example in tqdm(data, f'Aumentando dataset {dataset_path.split("/")[-1]}'):
         for paragraph in example['paragraphs']:
             context = paragraph['context']
@@ -181,61 +234,19 @@ def augment_dataset(
             for qa in qas_list:
                 answers = qa['answers']
                 question = qa['question']
+                if all([answers[0]['text'] == answer['text'] for answer in answers]):
+                    answer = answers[0]['text']
+                    for _ in range(augmented_examples):
+                        new_data.append(augment_example(question, context, answer, pct, synonym_pct))
+                else:
+                    for answer in answers:
+                        for _ in range(augmented_examples):
+                            new_data.append(augment_example(question, context, answer['text'], pct, synonym_pct))
 
-                for augmented_example in range(augment_examples):
-                    if np.random.randn() < 0.7:
-                        #TODO: tener en cuenta de no alterar las palabras
-                        # que esten en la respuesta.
-                        # nlpaug -> https://github.com/makcedward/nlpaug/blob/master/example/textual_augmenter.ipynb
-                        context = add_synonyms(context, pct=pct)
-                        answer = add_synonyms(answer, pct=pct)
-                        question = add_synonyms(question, pct=pct)
-                    else:
-                        context = del_words(context, pct=pct)
-                        answer = del_words(answer, pct=pct)
-                        question = del_words(question, pct=pct)
+    augmented_dataset = data + new_data
 
-                    data.append({
-                        'paragraphs': [{
-                            'context': context,
-                            'qas': [{
-                                'answers': [{'answer_start': None, 'text': answer}],
-                                'question': question,
-                                'id': None
-                            }]
-                        }],
-                     'title': None
-                    })
+    if save:
+        with open(save, 'w') as file:
+            json.dump({'data': augmented_dataset}, file)
 
-def add_synonyms(sentence, pct):
-    """
-    Cambia un porcentaje de las palabras en la oracion por
-    sinónimos.
-
-    Parameters:
-    -----------
-    sentence : str
-    pct : float
-        Porcentaje de palabras a cambiar
-
-    Returns:
-    --------
-    str
-    """
-    words_to_change = int(len(sentence.split(' ')) * pct)
-
-def del_words(sentence, pct):
-    """
-    Elimina un porcentaje de las palabras en la oracion.
-
-    Parameters:
-    -----------
-    sentence : str
-    pct : float
-        Porcentaje de palabras a eliminar
-
-    Returns:
-    --------
-    str
-    """
-    words_to_delete = int(len(sentence.split(' ')) * pct)
+    return augmented_dataset

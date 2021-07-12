@@ -3,3 +3,5 @@ torch
 click
 tqdm
 numpy
+nltk
+nlpaug
