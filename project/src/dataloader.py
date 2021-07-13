@@ -42,16 +42,14 @@ def create_shuffled_dataset(processed_path, adversarial_flag=False):
     datasets = load_processed_datasets(processed_path)
     shuffled_dataset = list()
 
-    oodomain_datasets = [k for k, v in datasets.items() if len(v) < 500]
+    label_encoding = dict(zip(
+        [k for k in datasets.keys()], range(len(datasets.keys()))
+    ))
 
     for name, dataset in datasets.items():
         if adversarial_flag:
-            if name in oodomain_datasets:
-                for example in dataset:
-                    example['oodomain'] = 1
-            else:
-                for example in dataset:
-                    example['oodomain'] = 0
+            for example in dataset:
+                example['domain'] = label_encoding[name]
 
             shuffled_dataset += dataset
 
