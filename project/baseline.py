@@ -83,7 +83,7 @@ def main(train_path, val_path, batch_size, epochs, lr, device, save_path):
     loss = nn.CrossEntropyLoss()
     optimizer = AdamW(model.parameters(), lr=lr, eps=1e-8)
 
-    model, history = baseline.train_baseline(
+    model, history = baseline_model.train_baseline(
         model,
         train_dataloader,
         val_dataloader,
