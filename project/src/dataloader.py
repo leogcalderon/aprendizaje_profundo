@@ -34,6 +34,7 @@ def create_shuffled_dataset(processed_path, adversarial_flag=False):
     -----------
     processed_path : str
     adversarial_flag : bool
+        Agrega un int para indicar el dominio
 
     Returns:
     --------
@@ -91,13 +92,19 @@ def prepare_inputs(example, tokenizer, chunk_size=384):
         [tokenizer.pad_token_id] * (chunk_size - len(example['input_ids']))
     )
 
-    return {
+    inputs = {
         'input_ids': torch.Tensor(input_ids).int(),
         'start_idx': torch.tensor([example['spans'][0]]).int(),
         'end_idx': torch.tensor([example['spans'][1]]).int(),
         'token_type_ids': torch.Tensor(token_type_ids).int(),
         'attention_mask': torch.Tensor(attention_mask).int()
     }
+
+    if 'domain' in example.keys():
+        inputs['domain'] = torch.Tensor([example['domain']])
+        return inputs
+
+    return inputs
 
 class QADataset(Dataset):
     def __init__(self, data, tokenizer, chunk_size=384):
