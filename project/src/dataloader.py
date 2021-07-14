@@ -58,6 +58,9 @@ def create_shuffled_dataset(processed_path, adversarial_flag=False):
             shuffled_dataset += dataset
 
     random.shuffle(shuffled_dataset)
+
+    if adversarial_flag:
+        return shuffled_dataset, label_encoding
     return shuffled_dataset
 
 def prepare_inputs(example, tokenizer, chunk_size=384):

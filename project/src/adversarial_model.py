@@ -219,30 +219,27 @@ def train_adversarial(
 
                 val_qa_epoch_loss += qa_l.item()
                 val_qa_adv_epoch_loss += qa_adv_l.item()
-                history['val']['spans_loss'].append(qa_l.item())
-                history['val']['qa_adv_loss'].append(qa_adv_l.item())
 
                 # Perdida del discriminador
                 cls, _, _ = qa(input_ids, token_type_ids, attention_mask)
                 discriminator_pred = discriminator(cls)
                 d_adv_l = adv_d_loss(discriminator_pred, domains.squeeze(-1))
 
-                history['val']['discriminator_loss'].append(d_adv_l.item())
                 val_d_adv_epoch_loss += d_adv_l.item()
 
                 if i % print_every == (print_every - 1):
                     current_time = time.time()
                     elapsed_time = epoch_time(start_time, current_time)
 
-                    val_qa_loss = val_qa_epoch_loss / (i * val_dataloader.batch_size)
-                    val_qa_adv_loss = val_qa_adv_epoch_loss / (i * val_dataloader.batch_size)
-                    val_d_adv_loss = val_d_adv_epoch_loss / (i * val_dataloader.batch_size)
-
                     print(f'[EPOCH: {epoch + 1} - BATCH: {i + 1}/{len(val_dataloader)}]')
-                    print(f'Perdida QA spans: {val_qa_loss}')
-                    print(f'Perdida QA Adv: {val_qa_adv_loss}')
-                    print(f'Perdida Discriminador: {val_d_adv_loss}')
+                    print(f'Perdida QA spans: {val_qa_epoch_loss / (i * val_dataloader.batch_size)}')
+                    print(f'Perdida QA Adv: {val_qa_adv_epoch_loss / (i * val_dataloader.batch_size)}')
+                    print(f'Perdida Discriminador: {val_d_adv_epoch_loss / (i * val_dataloader.batch_size)}')
                     print(f'Tiempo entrenando: {elapsed_time[0]}:{elapsed_time[1]} minutos')
                     print('================================')
+
+        history['val']['spans_loss'].append(val_qa_epoch_loss / (i * val_dataloader.batch_size))
+        history['val']['qa_adv_loss'].append(val_qa_adv_epoch_loss / (i * val_dataloader.batch_size))
+        history['val']['discriminator_loss'].append(val_d_adv_epoch_loss / (i * val_dataloader.batch_size))
 
     return qa, discriminator, history
