@@ -1,5 +1,6 @@
 import torch
 from tqdm import tqdm
+from collections import Counter
 
 def prepare_inputs(example, tokenizer, chunk_size=384):
     """
@@ -126,3 +127,27 @@ def get_scores(model, dataset, tokenizer, device):
         sum(metrics['EM']) / len(metrics['EM']),
         sum(metrics['F1']) / len(metrics['F1'])
     )
+
+def calculate_class_weigths(dataset, encoding):
+    """
+    Calcula los pesos a usar en la funcion
+    de perdida para las clases.
+
+    Parameters:
+    -----------
+    dataset : list
+    encoding : dict
+
+    Returns:
+    --------
+    dict
+    """
+    encoding_ = {v: k for k, v in encoding.items()}
+    class_weigths = []
+    for example in dataset:
+        class_ = encoding_[example['domain']]
+        class_weigths.append(class_)
+
+    class_weigths = dict(Counter(class_weigths))
+    max_class_n = class_weigths[max(class_weigths)]
+    return {k : max_class_n/v for k, v in class_weigths.items()}
