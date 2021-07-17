@@ -43,11 +43,13 @@ class DomainDiscriminator(nn.Module):
         layers.append(nn.Linear(hidden_size, classes))
         self.layers = nn.ModuleList(layers)
 
-    def forward(self, x):
+    def forward(self, x, log=True):
         for layer in self.layers[:-1]:
             x = layer(x)
         x = self.layers[-1](x)
-        return F.log_softmax(x, dim=1)
+        if log:
+            return F.log_softmax(x, dim=1)
+        return F.softmax(x, dim=1)
 
 class BaseModel(nn.Module):
     """
@@ -223,6 +225,169 @@ def train_adversarial(
                 # Perdida del discriminador
                 cls, _, _ = qa(input_ids, token_type_ids, attention_mask)
                 discriminator_pred = discriminator(cls)
+                d_adv_l = adv_d_loss(discriminator_pred, domains.squeeze(-1))
+
+                val_d_adv_epoch_loss += d_adv_l.item()
+
+                if i % print_every == (print_every - 1):
+                    current_time = time.time()
+                    elapsed_time = epoch_time(start_time, current_time)
+
+                    print(f'[EPOCH: {epoch + 1} - BATCH: {i + 1}/{len(val_dataloader)}]')
+                    print(f'Perdida QA spans: {val_qa_epoch_loss / (i * val_dataloader.batch_size)}')
+                    print(f'Perdida QA Adv: {val_qa_adv_epoch_loss / (i * val_dataloader.batch_size)}')
+                    print(f'Perdida Discriminador: {val_d_adv_epoch_loss / (i * val_dataloader.batch_size)}')
+                    print(f'Tiempo entrenando: {elapsed_time[0]}:{elapsed_time[1]} minutos')
+                    print('================================')
+
+        history['val']['spans_loss'].append(val_qa_epoch_loss / (i * val_dataloader.batch_size))
+        history['val']['qa_adv_loss'].append(val_qa_adv_epoch_loss / (i * val_dataloader.batch_size))
+        history['val']['discriminator_loss'].append(val_d_adv_epoch_loss / (i * val_dataloader.batch_size))
+
+    return qa, discriminator, history
+
+def train_adversarial_wasserstein(
+    qa, discriminator, train_dataloader, val_dataloader,
+    qa_optimizer, d_optimizer, qa_loss, adv_qa_loss,
+    adv_d_loss, epochs, adv_lambda, device, print_every=200, multi_step=2):
+    """
+    Bucle de entrenamiento adversario para el baseline
+    """
+    qa.to(device)
+    discriminator.to(device)
+    history = {
+        'train': {
+            'spans_loss': [],
+            'qa_adv_loss': [],
+            'discriminator_loss': []
+        },
+        'val': {
+            'spans_loss': [],
+            'qa_adv_loss': [],
+            'discriminator_loss': []
+        }
+    }
+
+    for epoch in range(epochs):
+        train_qa_epoch_loss = train_d_adv_epoch_loss = train_qa_adv_epoch_loss = 0
+        val_qa_epoch_loss = val_d_adv_epoch_loss = val_qa_adv_epoch_loss = 0
+
+        start_time = time.time()
+
+        print('Entrenando modelo')
+        for i, example in enumerate(train_dataloader):
+
+            qa.train()
+            discriminator.train()
+            qa_optimizer.zero_grad()
+            d_optimizer.zero_grad()
+
+            input_ids, token_type_ids, attention_mask = (
+                example['input_ids'].to(device),
+                example['token_type_ids'].to(device),
+                example['attention_mask'].to(device)
+            )
+
+            start_idx, end_idx, domains = (
+                example['start_idx'].long().to(device),
+                example['end_idx'].long().to(device),
+                example['domain'].long().to(device)
+            )
+
+            # Primero se entrena el sistema QA y luego el discriminador
+            # Output de BERT. [CLS] token y logits de los MLP de comienzo y fin
+            cls, start_logits, end_logits = qa(input_ids, token_type_ids, attention_mask)
+
+            # Output del discriminador
+            discriminator_pred = discriminator(cls)
+
+            # Promedio de las funciones de perdida QA
+            # de los tokens de entrada y de salida
+            qa_l = (qa_loss(start_logits, start_idx) + qa_loss(end_logits, end_idx)) / 2
+
+            # Perdida adversaria QA
+            qa_adv_l = adv_qa_loss(discriminator_pred, torch.ones_like(discriminator_pred) / discriminator.classes)
+
+            # Perdida total del QA
+            total_l = qa_l + adv_lambda * qa_adv_l
+
+            # Guardar valores de perdida
+            train_qa_epoch_loss += qa_l.item()
+            train_qa_adv_epoch_loss += qa_adv_l.item()
+            history['train']['spans_loss'].append(qa_l.item())
+            history['train']['qa_adv_loss'].append(qa_adv_l.item())
+
+            total_l.backward()
+            qa_optimizer.step()
+
+            # Entrenamos mas el discriminador
+            for _ in range(multi_step):
+                # Perdida del discriminador
+                with torch.no_grad():
+                    cls, _, _ = qa(input_ids, token_type_ids, attention_mask)
+
+                discriminator_pred = discriminator(cls, log=False)
+                d_adv_l = adv_d_loss(discriminator_pred, domains.squeeze(-1))
+
+                # Guardar valores de perdida
+                history['train']['discriminator_loss'].append(d_adv_l.item())
+                train_d_adv_epoch_loss += d_adv_l.item()
+
+                d_adv_l.backward()
+                d_optimizer.step()
+
+                # Weight clipping
+                for parameter in discriminator.parameters():
+                    parameter.data.clamp_(-0.01, 0.01)
+
+            if i % print_every == (print_every - 1):
+                current_time = time.time()
+                elapsed_time = epoch_time(start_time, current_time)
+
+                train_qa_loss = train_qa_epoch_loss / (i * train_dataloader.batch_size)
+                train_qa_adv_loss = train_qa_adv_epoch_loss / (i * train_dataloader.batch_size)
+                train_d_adv_loss = train_d_adv_epoch_loss / (i * train_dataloader.batch_size)
+
+                print(f'[EPOCH: {epoch + 1} - BATCH: {i + 1}/{len(train_dataloader)}]')
+                print(f'Perdida QA spans: {train_qa_loss}')
+                print(f'Perdida QA Adv: {train_qa_adv_loss}')
+                print(f'Perdida Discriminador: {train_d_adv_loss}')
+                print(f'Tiempo entrenando: {elapsed_time[0]}:{elapsed_time[1]} minutos')
+                print('================================')
+
+        print('Validando modelo')
+        for i, example in enumerate(val_dataloader):
+            qa.eval()
+            discriminator.eval()
+
+            with torch.no_grad():
+                input_ids, token_type_ids, attention_mask = (
+                    example['input_ids'].to(device),
+                    example['token_type_ids'].to(device),
+                    example['attention_mask'].to(device)
+                )
+
+                start_idx, end_idx, domains = (
+                    example['start_idx'].long().to(device),
+                    example['end_idx'].long().to(device),
+                    example['domain'].long().to(device)
+                )
+
+                # Salidas de modelos
+                cls, start_logits, end_logits = qa(input_ids, token_type_ids, attention_mask)
+                discriminator_pred = discriminator(cls)
+
+                # Perdida total del QA
+                qa_l = (qa_loss(start_logits, start_idx) + qa_loss(end_logits, end_idx)) / 2
+                qa_adv_l = adv_qa_loss(discriminator_pred, torch.ones_like(discriminator_pred) / discriminator.classes)
+                total_l = qa_l + adv_lambda * qa_adv_l
+
+                val_qa_epoch_loss += qa_l.item()
+                val_qa_adv_epoch_loss += qa_adv_l.item()
+
+                # Perdida del discriminador
+                cls, _, _ = qa(input_ids, token_type_ids, attention_mask)
+                discriminator_pred = discriminator(cls, log=False)
                 d_adv_l = adv_d_loss(discriminator_pred, domains.squeeze(-1))
 
                 val_d_adv_epoch_loss += d_adv_l.item()
