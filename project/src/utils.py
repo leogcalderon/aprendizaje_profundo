@@ -150,4 +150,11 @@ def calculate_class_weigths(dataset, encoding):
 
     class_weigths = dict(Counter(class_weigths))
     max_class_n = class_weigths[max(class_weigths)]
-    return {k : max_class_n/v for k, v in class_weigths.items()}
+    class_weigths = {k : max_class_n/v for k, v in class_weigths.items()}
+    class_weigths = {encoding[k]: v for k, v in class_weigths.items()}
+
+    cw = []
+    for i in range(6):
+        cw.append(class_weigths[i])
+
+    return torch.Tensor(cw)
